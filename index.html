@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Comptes</title>
+<style>
+:root{
+  --cream:#FBF7F0;
+  --ink:#2B2A28;
+  --ink-soft:#6B6560;
+  --sage:#5F8B7A;
+  --sage-dark:#436B5C;
+  --apricot:#E2984B;
+  --blush:#F1DCC9;
+  --line:#E4DACB;
+  --white:#FFFFFF;
+  --red:#B0453B;
+  --radius:16px;
+}
+*{ box-sizing:border-box; }
+body{
+  margin:0;
+  background:var(--cream);
+  color:var(--ink);
+  font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+  -webkit-font-smoothing:antialiased;
+  padding-bottom:40px;
+}
+
+header{
+  background:var(--sage);
+  color:var(--white);
+  padding:16px 18px;
+  display:flex;
+  align-items:center;
+  gap:12px;
+  position:relative;
+  z-index:10;
+}
+header h1{ font-size:1.2rem; margin:0; font-weight:800; }
+header .home-link{
+  color:var(--white);
+  text-decoration:none;
+  font-size:20px;
+}
+.hamburger-btn{
+  background:none;
+  border:none;
+  color:var(--white);
+  width:36px;
+  height:36px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+  margin-left:auto;
+}
+.hamburger-btn svg{ width:22px; height:22px; }
+
+.nav-overlay{
+  display:none;
+  position:fixed; inset:0;
+  background:rgba(43,42,40,0.25);
+  z-index:60;
+}
+.nav-overlay.show{ display:block; }
+.nav-drawer{
+  position:fixed;
+  top:0; right:0;
+  width:250px;
+  height:100vh;
+  background:var(--white);
+  padding:70px 10px 10px;
+  box-shadow:-8px 0 24px rgba(43,42,40,0.15);
+  transform:translateX(100%);
+  transition:transform .2s ease;
+}
+.nav-overlay.show .nav-drawer{ transform:translateX(0); }
+.nav-title{ font-weight:800; font-size:0.78rem; color:var(--ink-soft); text-transform:uppercase; letter-spacing:0.04em; padding:6px 12px 12px; }
+.nav-item{
+  display:flex; align-items:center; gap:10px;
+  padding:12px 12px; border-radius:10px;
+  font-weight:700; font-size:0.95rem; color:var(--ink);
+  cursor:pointer; margin-bottom:4px;
+}
+.nav-item.active{ background:var(--blush); color:var(--sage-dark); }
+
+main{ max-width:1900px; margin:0 auto; padding:16px; }
+
+.filters{
+  display:flex;
+  gap:8px;
+  margin-bottom:16px;
+}
+.filters select{
+  font-family:inherit;
+  font-size:0.9rem;
+  padding:10px 12px;
+  border:1px solid var(--line);
+  border-radius:12px;
+  background:var(--white);
+  color:var(--ink);
+}
+
+.tabs{
+  display:flex;
+  gap:8px;
+  margin-bottom:16px;
+  flex-wrap:wrap;
+}
+.tab-btn{
+  padding:9px 18px;
+  border-radius:999px;
+  border:1px solid var(--line);
+  background:var(--white);
+  font-weight:700;
+  font-size:0.85rem;
+  color:var(--ink-soft);
+  cursor:pointer;
+}
+.tab-btn.active{ background:var(--sage); color:var(--white); border-color:var(--sage); }
+.tab-btn.disabled{ opacity:0.5; cursor:default; }
+
+.cc-layout{
+  display:flex;
+  gap:16px;
+  align-items:flex-start;
+}
+.cc-col{
+  flex:1;
+  min-width:0;
+}
+@media (max-width: 900px){
+  .cc-layout{ flex-direction:column; }
+}
+
+.card{
+  background:var(--white);
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  padding:16px;
+  margin-bottom:16px;
+}
+.card-title{
+  font-size:0.8rem;
+  font-weight:800;
+  text-transform:uppercase;
+  letter-spacing:0.04em;
+  color:var(--sage-dark);
+  margin-bottom:12px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+}
+.card-title .total{
+  font-size:1rem;
+  color:var(--ink);
+  text-transform:none;
+  letter-spacing:0;
+}
+
+table{ width:100%; border-collapse:collapse; font-size:0.88rem; }
+th{
+  text-align:left;
+  padding:6px 8px;
+  border-bottom:2px solid var(--line);
+  color:var(--ink-soft);
+  font-size:0.72rem;
+  text-transform:uppercase;
+  letter-spacing:0.03em;
+}
+td{
+  padding:6px 8px;
+  border-bottom:1px solid var(--line);
+}
+tr.non-coche td{ color:var(--ink-soft); background:#FBF3EA; }
+td.amt{ text-align:right; font-weight:700; white-space:nowrap; }
+th.center, td.center{ text-align:center; }
+
+input[type="checkbox"]{ width:18px; height:18px; }
+
+.row-input{
+  width:100%;
+  border:1px solid var(--line);
+  border-radius:8px;
+  padding:6px 8px;
+  font-family:inherit;
+  font-size:0.85rem;
+  background:var(--white);
+  color:var(--ink);
+}
+.row-input.amt-input{ text-align:right; }
+
+.btn-delete{
+  background:none;
+  border:none;
+  color:var(--red);
+  font-size:1.05rem;
+  cursor:pointer;
+  padding:2px 6px;
+  line-height:1;
+}
+
+.btn-add{
+  width:100%;
+  margin-top:10px;
+  padding:9px;
+  border:1px dashed var(--sage);
+  border-radius:10px;
+  background:none;
+  color:var(--sage-dark);
+  font-weight:700;
+  font-size:0.85rem;
+  cursor:pointer;
+}
+.btn-add:hover{ background:var(--blush); }
+
+.placeholder{
+  text-align:center;
+  padding:50px 20px;
+  color:var(--ink-soft);
+  font-size:0.9rem;
+}
+
+.param-add-row{
+  display:flex;
+  gap:8px;
+  margin-bottom:14px;
+}
+.param-add-row input{
+  border:1px solid var(--line);
+  border-radius:10px;
+  padding:9px 10px;
+  font-family:inherit;
+  font-size:0.9rem;
+}
+.param-add-row .p-libelle{ flex:2; }
+.param-add-row .p-montant{ flex:1; text-align:right; }
+.param-add-row button{
+  padding:9px 16px;
+  border:none;
+  border-radius:10px;
+  background:var(--apricot);
+  color:var(--white);
+  font-weight:700;
+  cursor:pointer;
+}
+
+.param-item{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  background:var(--white);
+  border:1px solid var(--line);
+  border-radius:12px;
+  padding:8px 12px;
+  margin-bottom:8px;
+}
+.param-item input{
+  border:1px solid var(--line);
+  border-radius:8px;
+  padding:7px 9px;
+  font-family:inherit;
+  font-size:0.88rem;
+}
+.param-item .p-libelle{ flex:2; }
+.param-item .p-montant{ flex:1; text-align:right; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>💰 Comptes</h1>
+  <a class="home-link" href="https://seguinicolas.github.io/Menu-application-/" title="Menu général">🏠</a>
+  <button class="hamburger-btn" id="btnMenu" aria-label="Menu">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+  </button>
+</header>
+
+<div class="nav-overlay" id="navOverlay">
+  <div class="nav-drawer">
+    <div class="nav-title">Menu</div>
+    <div class="nav-item active" id="navComptes" onclick="showView('comptes')">💳 Comptes</div>
+    <div class="nav-item" id="navParametres" onclick="showView('parametres')">⚙️ Paramètres</div>
+  </div>
+</div>
+
+<main>
+
+  <div id="viewComptes">
+    <div class="filters">
+      <select id="filterMois" onchange="onFiltreChange()"></select>
+      <select id="filterAnnee" onchange="onFiltreChange()"></select>
+    </div>
+
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="cc" onclick="selectTab('cc')">CC</button>
+      <button class="tab-btn disabled" data-tab="livretA" onclick="selectTab('livretA')">Livret A</button>
+      <button class="tab-btn disabled" data-tab="pel" onclick="selectTab('pel')">PEL</button>
+      <button class="tab-btn disabled" data-tab="recap" onclick="selectTab('recap')">Récap</button>
+    </div>
+
+    <div id="tabContent"></div>
+  </div>
+
+  <div id="viewParametres" style="display:none">
+    <div class="card">
+      <div class="card-title"><span>Modèles de charges fixes</span></div>
+      <div class="param-add-row">
+        <input class="p-libelle" id="modeleLibelleInput" type="text" placeholder="Libellé (ex : Loyer)">
+        <input class="p-montant" id="modeleMontantInput" type="number" step="0.01" placeholder="Montant">
+        <button onclick="addModele()">+ Ajouter</button>
+      </div>
+      <div id="modelesList"></div>
+    </div>
+  </div>
+
+</main>
+
+<script>
+// ---------- Catégories (liste fixe temporaire, deviendra un vrai onglet Paramètres plus tard) ----------
+const CATEGORIES = ['Essence', 'Tabac', 'Course', 'Travaux', 'Divers', 'Virement interne', 'Vir livret A'];
+
+// ---------- Backend Data_compte ----------
+const API_URL = 'https://script.google.com/macros/s/AKfycbxsxEqaP6YV9Idp0VrK66e9u6rULpon2xN34Prnnz27pBFSrP_Hg23IygSre1zW0S5aTw/exec';
+
+async function apiGet(action, params){
+  params = params || {};
+  const qs = new URLSearchParams({ action, _ts: Date.now(), ...params }).toString();
+  try {
+    const res = await fetch(`${API_URL}?${qs}`);
+    return await res.json();
+  } catch (err){
+    return { error: 'Connexion impossible (' + action + ') : ' + err.message };
+  }
+}
+
+async function apiPost(action, data){
+  try {
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action, data })
+    });
+    return await res.json();
+  } catch (err){
+    return { error: 'Connexion impossible (' + action + ') : ' + err.message };
+  }
+}
+
+// ---------- Modèles de charges fixes (Paramètres, stockés dans Data_compte) ----------
+let modelesChargeFixe = [];
+let modelesCharges = false;
+
+async function loadModeles(){
+  const res = await apiGet('getModelesChargeFixe');
+  if (res && res.error){
+    document.getElementById('modelesList').innerHTML = `<div class="placeholder" style="padding:20px;color:var(--red);">Erreur : ${res.error}</div>`;
+    return;
+  }
+  modelesChargeFixe = res || [];
+  modelesCharges = true;
+  renderModeles();
+}
+
+// ---------- Données par mois (clé "AAAA-MM") ----------
+// data[cle] n'existe que si ce mois a déjà été "initialisé" (première visite) :
+// c'est ce qui empêche de ré-insérer les charges fixes à chaque changement de filtre.
+let data = {};
+
+function moisKey(annee, moisIndex){
+  return `${annee}-${String(moisIndex + 1).padStart(2, '0')}`;
+}
+
+function currentKey(){
+  const annee = parseInt(document.getElementById('filterAnnee').value, 10);
+  const mois = parseInt(document.getElementById('filterMois').value, 10);
+  return moisKey(annee, mois);
+}
+
+// Crée les données du mois s'il n'existe pas encore, en insérant automatiquement
+// une copie des modèles de charges fixes (décochée, montant figé à cet instant).
+// Les mois déjà initialisés ne sont jamais retouchés par cette fonction.
+function ensureMonthData(key){
+  if (data[key]) return;
+  data[key] = {
+    revenus: [],
+    chargesFixes: modelesChargeFixe.map(m => ({
+      coche: false,
+      date: '',
+      libelle: m.Libelle,
+      montant: m.Montant
+    })),
+    chargesVariables: []
+  };
+}
+
+// ---------- Filtre mois / année ----------
+const MOIS = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+
+function initFiltres(){
+  const moisSelect = document.getElementById('filterMois');
+  moisSelect.innerHTML = MOIS.map((m, i) => `<option value="${i}">${m}</option>`).join('');
+  moisSelect.value = new Date().getMonth();
+
+  const anneeSelect = document.getElementById('filterAnnee');
+  const anneeActuelle = new Date().getFullYear();
+  const annees = [anneeActuelle - 1, anneeActuelle, anneeActuelle + 1];
+  anneeSelect.innerHTML = annees.map(a => `<option value="${a}">${a}</option>`).join('');
+  anneeSelect.value = anneeActuelle;
+}
+
+function onFiltreChange(){
+  ensureMonthData(currentKey());
+  render();
+}
+
+// ---------- Navigation (Comptes / Paramètres) ----------
+function toggleNav(){
+  document.getElementById('navOverlay').classList.toggle('show');
+}
+function closeNav(){
+  document.getElementById('navOverlay').classList.remove('show');
+}
+document.getElementById('btnMenu').addEventListener('click', toggleNav);
+document.getElementById('navOverlay').addEventListener('click', (e) => { if (e.target.id === 'navOverlay') closeNav(); });
+
+function showView(view){
+  document.getElementById('viewComptes').style.display = view === 'comptes' ? '' : 'none';
+  document.getElementById('viewParametres').style.display = view === 'parametres' ? '' : 'none';
+  document.getElementById('navComptes').classList.toggle('active', view === 'comptes');
+  document.getElementById('navParametres').classList.toggle('active', view === 'parametres');
+  closeNav();
+  if (view === 'parametres') loadModeles();
+}
+
+// ---------- Onglets internes (CC / Livret A / PEL / Récap) ----------
+let currentTab = 'cc';
+
+function selectTab(tab){
+  currentTab = tab;
+  document.querySelectorAll('.tab-btn').forEach(b => {
+    if (b.classList.contains('disabled')) return;
+    b.classList.toggle('active', b.dataset.tab === tab);
+  });
+  render();
+}
+
+function num(v){
+  const n = parseFloat(v);
+  return isNaN(n) ? 0 : n;
+}
+
+function render(){
+  if (currentTab === 'cc') renderCC();
+  else if (currentTab === 'livretA') renderPlaceholder('Livret A');
+  else if (currentTab === 'pel') renderPlaceholder('PEL');
+  else if (currentTab === 'recap') renderPlaceholder('Récap');
+}
+
+function renderPlaceholder(label){
+  document.getElementById('tabContent').innerHTML = `<div class="placeholder">🚧 ${label} — à construire prochainement.</div>`;
+}
+
+// ---------- CC ----------
+function renderCC(){
+  const key = currentKey();
+  ensureMonthData(key);
+  const mois = data[key];
+
+  const totalRevenus = mois.revenus.reduce((s, r) => s + num(r.montant), 0);
+  const totalFixesCochees = mois.chargesFixes.filter(c => c.coche).reduce((s, c) => s + num(c.montant), 0);
+  const totalVariablesCochees = mois.chargesVariables.filter(c => c.coche).reduce((s, c) => s + num(c.montant), 0);
+
+  const container = document.getElementById('tabContent');
+  container.innerHTML = `
+    <div class="cc-layout">
+      <div class="cc-col">
+        <div class="card">
+          <div class="card-title">
+            <span>Revenu</span>
+            <span class="total">${totalRevenus.toFixed(2)} €</span>
+          </div>
+          <table>
+            <thead><tr><th style="width:120px">Date</th><th>Libellé</th><th style="width:110px">Montant</th><th style="width:30px"></th></tr></thead>
+            <tbody id="revenuBody"></tbody>
+          </table>
+          <button class="btn-add" onclick="addRevenu()">+ Ajouter un revenu</button>
+        </div>
+      </div>
+
+      <div class="cc-col">
+        <div class="card">
+          <div class="card-title">
+            <span>Charge fixe</span>
+            <span class="total">${totalFixesCochees.toFixed(2)} €</span>
+          </div>
+          <table>
+            <thead><tr><th class="center" style="width:34px">✓</th><th style="width:110px">Date</th><th>Libellé</th><th style="width:110px">Montant</th><th style="width:30px"></th></tr></thead>
+            <tbody id="chargeFixeBody"></tbody>
+          </table>
+          <button class="btn-add" onclick="addChargeFixe()">+ Ajouter une charge fixe</button>
+        </div>
+      </div>
+
+      <div class="cc-col">
+        <div class="card">
+          <div class="card-title">
+            <span>Charge variable</span>
+            <span class="total">${totalVariablesCochees.toFixed(2)} €</span>
+          </div>
+          <table>
+            <thead><tr><th class="center" style="width:34px">✓</th><th style="width:110px">Date</th><th>Libellé</th><th style="width:130px">Catégorie</th><th style="width:100px">Montant</th><th style="width:30px"></th></tr></thead>
+            <tbody id="chargeVariableBody"></tbody>
+          </table>
+          <button class="btn-add" onclick="addChargeVariable()">+ Ajouter une charge variable</button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  renderRevenuRows();
+  renderChargeFixeRows();
+  renderChargeVariableRows();
+}
+
+function renderRevenuRows(){
+  const mois = data[currentKey()];
+  const body = document.getElementById('revenuBody');
+  body.innerHTML = mois.revenus.map((r, i) => `
+    <tr>
+      <td><input class="row-input" type="date" value="${r.date}" onchange="data['${currentKey()}'].revenus[${i}].date=this.value"></td>
+      <td><input class="row-input" type="text" value="${r.libelle}" placeholder="Ex : Salaire" onchange="data['${currentKey()}'].revenus[${i}].libelle=this.value"></td>
+      <td><input class="row-input amt-input" type="number" step="0.01" value="${r.montant}" placeholder="0.00" oninput="data['${currentKey()}'].revenus[${i}].montant=this.value; renderCC();"></td>
+      <td><button class="btn-delete" onclick="removeRevenu(${i})">✕</button></td>
+    </tr>
+  `).join('');
+}
+
+function renderChargeFixeRows(){
+  const key = currentKey();
+  const mois = data[key];
+  const body = document.getElementById('chargeFixeBody');
+  body.innerHTML = mois.chargesFixes.map((c, i) => `
+    <tr class="${c.coche ? '' : 'non-coche'}">
+      <td class="center"><input type="checkbox" ${c.coche ? 'checked' : ''} onchange="data['${key}'].chargesFixes[${i}].coche=this.checked; renderCC();"></td>
+      <td><input class="row-input" type="date" value="${c.date}" onchange="data['${key}'].chargesFixes[${i}].date=this.value"></td>
+      <td><input class="row-input" type="text" value="${c.libelle}" placeholder="Ex : Loyer" onchange="data['${key}'].chargesFixes[${i}].libelle=this.value"></td>
+      <td><input class="row-input amt-input" type="number" step="0.01" value="${c.montant}" placeholder="0.00" oninput="data['${key}'].chargesFixes[${i}].montant=this.value; renderCC();"></td>
+      <td><button class="btn-delete" onclick="removeChargeFixe(${i})">✕</button></td>
+    </tr>
+  `).join('');
+}
+
+function renderChargeVariableRows(){
+  const key = currentKey();
+  const mois = data[key];
+  const body = document.getElementById('chargeVariableBody');
+  body.innerHTML = mois.chargesVariables.map((c, i) => `
+    <tr class="${c.coche ? '' : 'non-coche'}">
+      <td class="center"><input type="checkbox" ${c.coche ? 'checked' : ''} onchange="data['${key}'].chargesVariables[${i}].coche=this.checked; renderCC();"></td>
+      <td><input class="row-input" type="date" value="${c.date}" onchange="data['${key}'].chargesVariables[${i}].date=this.value"></td>
+      <td><input class="row-input" type="text" value="${c.libelle}" placeholder="Ex : Courses" onchange="data['${key}'].chargesVariables[${i}].libelle=this.value"></td>
+      <td>
+        <select class="row-input" onchange="data['${key}'].chargesVariables[${i}].categorie=this.value">
+          ${CATEGORIES.map(cat => `<option value="${cat}" ${c.categorie === cat ? 'selected' : ''}>${cat}</option>`).join('')}
+        </select>
+      </td>
+      <td><input class="row-input amt-input" type="number" step="0.01" value="${c.montant}" placeholder="0.00" oninput="data['${key}'].chargesVariables[${i}].montant=this.value; renderCC();"></td>
+      <td><button class="btn-delete" onclick="removeChargeVariable(${i})">✕</button></td>
+    </tr>
+  `).join('');
+}
+
+function addRevenu(){ data[currentKey()].revenus.push({ date:'', libelle:'', montant:'' }); renderCC(); }
+function removeRevenu(i){ data[currentKey()].revenus.splice(i,1); renderCC(); }
+
+function addChargeFixe(){ data[currentKey()].chargesFixes.push({ coche:false, date:'', libelle:'', montant:'' }); renderCC(); }
+function removeChargeFixe(i){ data[currentKey()].chargesFixes.splice(i,1); renderCC(); }
+
+function addChargeVariable(){ data[currentKey()].chargesVariables.push({ coche:true, date:'', libelle:'', categorie:CATEGORIES[0], montant:'' }); renderCC(); }
+function removeChargeVariable(i){ data[currentKey()].chargesVariables.splice(i,1); renderCC(); }
+
+// ---------- Paramètres : modèles de charges fixes ----------
+function renderModeles(){
+  const list = document.getElementById('modelesList');
+  if (!modelesCharges){
+    list.innerHTML = '<div class="placeholder" style="padding:20px;">Chargement...</div>';
+    return;
+  }
+  if (!modelesChargeFixe.length){
+    list.innerHTML = '<div class="placeholder" style="padding:20px;">Aucun modèle pour l\'instant.</div>';
+    return;
+  }
+  list.innerHTML = modelesChargeFixe.map((m, i) => `
+    <div class="param-item">
+      <input class="p-libelle" type="text" value="${m.Libelle}" onchange="updateModeleField(${i}, 'Libelle', this.value)">
+      <input class="p-montant" type="number" step="0.01" value="${m.Montant}" onchange="updateModeleField(${i}, 'Montant', this.value)">
+      <button class="btn-delete" onclick="removeModele(${i})">✕</button>
+    </div>
+  `).join('');
+}
+
+async function addModele(){
+  const libelle = document.getElementById('modeleLibelleInput').value.trim();
+  const montant = document.getElementById('modeleMontantInput').value;
+  if (!libelle){ alert('Entre un libellé'); return; }
+
+  const res = await apiPost('addModele', { Libelle: libelle, Montant: parseFloat(montant) || 0 });
+  if (res.error){ alert('Erreur : ' + res.error); return; }
+
+  document.getElementById('modeleLibelleInput').value = '';
+  document.getElementById('modeleMontantInput').value = '';
+  await loadModeles();
+}
+
+async function updateModeleField(i, champ, valeur){
+  const m = modelesChargeFixe[i];
+  m[champ] = champ === 'Montant' ? (parseFloat(valeur) || 0) : valeur;
+
+  const res = await apiPost('updateModele', { ID_Modele: m.ID_Modele, Libelle: m.Libelle, Montant: m.Montant });
+  if (res.error){ alert('Erreur : ' + res.error); await loadModeles(); }
+}
+
+async function removeModele(i){
+  if (!confirm('Supprimer ce modèle ? Les charges déjà insérées dans les mois existants ne seront pas touchées.')) return;
+
+  const m = modelesChargeFixe[i];
+  const res = await apiPost('deleteModele', { ID_Modele: m.ID_Modele });
+  if (res.error){ alert('Erreur : ' + res.error); return; }
+
+  await loadModeles();
+}
+
+// ---------- Démarrage ----------
+async function demarrer(){
+  initFiltres();
+  await loadModeles();
+  ensureMonthData(currentKey());
+  render();
+}
+demarrer();
+</script>
+</body>
+</html>
