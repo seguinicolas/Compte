@@ -175,7 +175,8 @@ td{
   padding:6px 8px;
   border-bottom:1px solid var(--line);
 }
-tr.non-coche td{ color:var(--ink-soft); background:#FBF3EA; }
+tr.coche td{ background:#E6F0EA; }
+tr.non-coche td{ color:var(--ink-soft); background:#FBE1DE; }
 td.amt{ text-align:right; font-weight:700; white-space:nowrap; }
 th.center, td.center{ text-align:center; }
 
@@ -330,14 +331,25 @@ input[type="checkbox"]{ width:18px; height:18px; }
           <div id="modelesRevenuList"></div>
         </div>
       </div>
+
+      <div class="cc-col">
+        <div class="card">
+          <div class="card-title"><span>Catégories (charges variables)</span></div>
+          <div class="param-add-row">
+            <input class="p-libelle" id="categorieLibelleInput" type="text" placeholder="Libellé (ex : Essence)" style="flex:1">
+            <button onclick="addCategorie()">+ Ajouter</button>
+          </div>
+          <div id="categoriesList"></div>
+        </div>
+      </div>
     </div>
   </div>
 
 </main>
 
 <script>
-// ---------- Catégories (liste fixe temporaire, deviendra un vrai onglet Paramètres plus tard) ----------
-const CATEGORIES = ['Essence', 'Tabac', 'Course', 'Travaux', 'Divers', 'Virement interne', 'Vir livret A'];
+// ---------- Catégories (Paramètres, gérées dans Data_compte) ----------
+let categories = [];
 
 // ---------- Backend Data_compte ----------
 const API_URL = 'https://script.google.com/macros/s/AKfycbxsxEqaP6YV9Idp0VrK66e9u6rULpon2xN34Prnnz27pBFSrP_Hg23IygSre1zW0S5aTw/exec';
@@ -418,6 +430,7 @@ function ensureMonthData(key){
   if (data[key]) return;
   data[key] = {
     revenus: modelesRevenu.map(m => ({
+      coche: false,
       date: '',
       libelle: m.Libelle,
       montant: m.Montant
@@ -468,7 +481,7 @@ function showView(view){
   document.getElementById('navComptes').classList.toggle('active', view === 'comptes');
   document.getElementById('navParametres').classList.toggle('active', view === 'parametres');
   closeNav();
-  if (view === 'parametres'){ loadModeles(); loadModelesRevenu(); }
+  if (view === 'parametres'){ loadModeles(); loadModelesRevenu(); loadCategories(); }
 }
 
 // ---------- Onglets internes (CC / Livret A / PEL / Récap) ----------
@@ -505,9 +518,9 @@ function renderCC(){
   ensureMonthData(key);
   const mois = data[key];
 
-  const totalRevenus = mois.revenus.reduce((s, r) => s + num(r.montant), 0);
+  const totalRevenus = mois.revenus.filter(r => r.coche).reduce((s, r) => s + num(r.montant), 0);
   const totalFixesCochees = mois.chargesFixes.filter(c => c.coche).reduce((s, c) => s + num(c.montant), 0);
-  const totalVariablesCochees = mois.chargesVariables.filter(c => c.coche).reduce((s, c) => s + num(c.montant), 0);
+  const totalVariables = mois.chargesVariables.reduce((s, c) => s + num(c.montant), 0);
 
   const container = document.getElementById('tabContent');
   container.innerHTML = `
@@ -519,7 +532,7 @@ function renderCC(){
             <span class="total">${totalRevenus.toFixed(2)} €</span>
           </div>
           <table>
-            <thead><tr><th style="width:120px">Date</th><th>Libellé</th><th style="width:110px">Montant</th><th style="width:30px"></th></tr></thead>
+            <thead><tr><th class="center" style="width:34px">✓</th><th style="width:120px">Date</th><th>Libellé</th><th style="width:110px">Montant</th><th style="width:30px"></th></tr></thead>
             <tbody id="revenuBody"></tbody>
           </table>
           <button class="btn-add" onclick="addRevenu()">+ Ajouter un revenu</button>
@@ -544,10 +557,10 @@ function renderCC(){
         <div class="card">
           <div class="card-title">
             <span>Charge variable</span>
-            <span class="total">${totalVariablesCochees.toFixed(2)} €</span>
+            <span class="total">${totalVariables.toFixed(2)} €</span>
           </div>
           <table>
-            <thead><tr><th class="center" style="width:34px">✓</th><th style="width:110px">Date</th><th>Libellé</th><th style="width:130px">Catégorie</th><th style="width:100px">Montant</th><th style="width:30px"></th></tr></thead>
+            <thead><tr><th style="width:110px">Date</th><th>Libellé</th><th style="width:130px">Catégorie</th><th style="width:100px">Montant</th><th style="width:30px"></th></tr></thead>
             <tbody id="chargeVariableBody"></tbody>
           </table>
           <button class="btn-add" onclick="addChargeVariable()">+ Ajouter une charge variable</button>
@@ -562,13 +575,15 @@ function renderCC(){
 }
 
 function renderRevenuRows(){
-  const mois = data[currentKey()];
+  const key = currentKey();
+  const mois = data[key];
   const body = document.getElementById('revenuBody');
   body.innerHTML = mois.revenus.map((r, i) => `
-    <tr>
-      <td><input class="row-input" type="date" value="${r.date}" onchange="data['${currentKey()}'].revenus[${i}].date=this.value"></td>
-      <td><input class="row-input" type="text" value="${r.libelle}" placeholder="Ex : Salaire" onchange="data['${currentKey()}'].revenus[${i}].libelle=this.value"></td>
-      <td><input class="row-input amt-input" type="number" step="0.01" value="${r.montant}" placeholder="0.00" oninput="data['${currentKey()}'].revenus[${i}].montant=this.value; renderCC();"></td>
+    <tr class="${r.coche ? 'coche' : 'non-coche'}">
+      <td class="center"><input type="checkbox" ${r.coche ? 'checked' : ''} onchange="data['${key}'].revenus[${i}].coche=this.checked; renderCC();"></td>
+      <td><input class="row-input" type="date" value="${r.date}" onchange="data['${key}'].revenus[${i}].date=this.value"></td>
+      <td><input class="row-input" type="text" value="${r.libelle}" placeholder="Ex : Salaire" onchange="data['${key}'].revenus[${i}].libelle=this.value"></td>
+      <td><input class="row-input amt-input" type="number" step="0.01" value="${r.montant}" placeholder="0.00" oninput="data['${key}'].revenus[${i}].montant=this.value; renderCC();"></td>
       <td><button class="btn-delete" onclick="removeRevenu(${i})">✕</button></td>
     </tr>
   `).join('');
@@ -579,7 +594,7 @@ function renderChargeFixeRows(){
   const mois = data[key];
   const body = document.getElementById('chargeFixeBody');
   body.innerHTML = mois.chargesFixes.map((c, i) => `
-    <tr class="${c.coche ? '' : 'non-coche'}">
+    <tr class="${c.coche ? 'coche' : 'non-coche'}">
       <td class="center"><input type="checkbox" ${c.coche ? 'checked' : ''} onchange="data['${key}'].chargesFixes[${i}].coche=this.checked; renderCC();"></td>
       <td><input class="row-input" type="date" value="${c.date}" onchange="data['${key}'].chargesFixes[${i}].date=this.value"></td>
       <td><input class="row-input" type="text" value="${c.libelle}" placeholder="Ex : Loyer" onchange="data['${key}'].chargesFixes[${i}].libelle=this.value"></td>
@@ -594,13 +609,12 @@ function renderChargeVariableRows(){
   const mois = data[key];
   const body = document.getElementById('chargeVariableBody');
   body.innerHTML = mois.chargesVariables.map((c, i) => `
-    <tr class="${c.coche ? '' : 'non-coche'}">
-      <td class="center"><input type="checkbox" ${c.coche ? 'checked' : ''} onchange="data['${key}'].chargesVariables[${i}].coche=this.checked; renderCC();"></td>
+    <tr>
       <td><input class="row-input" type="date" value="${c.date}" onchange="data['${key}'].chargesVariables[${i}].date=this.value"></td>
       <td><input class="row-input" type="text" value="${c.libelle}" placeholder="Ex : Courses" onchange="data['${key}'].chargesVariables[${i}].libelle=this.value"></td>
       <td>
         <select class="row-input" onchange="data['${key}'].chargesVariables[${i}].categorie=this.value">
-          ${CATEGORIES.map(cat => `<option value="${cat}" ${c.categorie === cat ? 'selected' : ''}>${cat}</option>`).join('')}
+          ${categories.map(cat => `<option value="${cat.Libelle}" ${c.categorie === cat.Libelle ? 'selected' : ''}>${cat.Libelle}</option>`).join('')}
         </select>
       </td>
       <td><input class="row-input amt-input" type="number" step="0.01" value="${c.montant}" placeholder="0.00" oninput="data['${key}'].chargesVariables[${i}].montant=this.value; renderCC();"></td>
@@ -609,13 +623,13 @@ function renderChargeVariableRows(){
   `).join('');
 }
 
-function addRevenu(){ data[currentKey()].revenus.push({ date:'', libelle:'', montant:'' }); renderCC(); }
+function addRevenu(){ data[currentKey()].revenus.push({ coche:false, date:'', libelle:'', montant:'' }); renderCC(); }
 function removeRevenu(i){ data[currentKey()].revenus.splice(i,1); renderCC(); }
 
 function addChargeFixe(){ data[currentKey()].chargesFixes.push({ coche:false, date:'', libelle:'', montant:'' }); renderCC(); }
 function removeChargeFixe(i){ data[currentKey()].chargesFixes.splice(i,1); renderCC(); }
 
-function addChargeVariable(){ data[currentKey()].chargesVariables.push({ coche:true, date:'', libelle:'', categorie:CATEGORIES[0], montant:'' }); renderCC(); }
+function addChargeVariable(){ data[currentKey()].chargesVariables.push({ date:'', libelle:'', categorie: categories.length ? categories[0].Libelle : '', montant:'' }); renderCC(); }
 function removeChargeVariable(i){ data[currentKey()].chargesVariables.splice(i,1); renderCC(); }
 
 // ---------- Paramètres : modèles de charges fixes ----------
@@ -720,10 +734,71 @@ async function removeModeleRevenu(i){
   await loadModelesRevenu();
 }
 
+// ---------- Paramètres : catégories ----------
+let categoriesChargees = false;
+
+async function loadCategories(){
+  const res = await apiGet('getCategories');
+  if (res && res.error){
+    document.getElementById('categoriesList').innerHTML = `<div class="placeholder" style="padding:20px;color:var(--red);">Erreur : ${res.error}</div>`;
+    return;
+  }
+  categories = res || [];
+  categoriesChargees = true;
+  renderCategories();
+}
+
+function renderCategories(){
+  const list = document.getElementById('categoriesList');
+  if (!categoriesChargees){
+    list.innerHTML = '<div class="placeholder" style="padding:20px;">Chargement...</div>';
+    return;
+  }
+  if (!categories.length){
+    list.innerHTML = '<div class="placeholder" style="padding:20px;">Aucune catégorie pour l\'instant.</div>';
+    return;
+  }
+  list.innerHTML = categories.map((c, i) => `
+    <div class="param-item">
+      <input class="p-libelle" type="text" value="${c.Libelle}" style="flex:1" onchange="updateCategorieField(${i}, this.value)">
+      <button class="btn-delete" onclick="removeCategorie(${i})">✕</button>
+    </div>
+  `).join('');
+}
+
+async function addCategorie(){
+  const libelle = document.getElementById('categorieLibelleInput').value.trim();
+  if (!libelle){ alert('Entre un libellé'); return; }
+
+  const res = await apiPost('addCategorie', { Libelle: libelle });
+  if (res.error){ alert('Erreur : ' + res.error); return; }
+
+  document.getElementById('categorieLibelleInput').value = '';
+  await loadCategories();
+}
+
+async function updateCategorieField(i, valeur){
+  const c = categories[i];
+  c.Libelle = valeur;
+
+  const res = await apiPost('updateCategorie', { ID_Categorie: c.ID_Categorie, Libelle: c.Libelle });
+  if (res.error){ alert('Erreur : ' + res.error); await loadCategories(); }
+}
+
+async function removeCategorie(i){
+  if (!confirm('Supprimer cette catégorie ? Les charges variables qui l\'utilisaient déjà ne seront pas modifiées.')) return;
+
+  const c = categories[i];
+  const res = await apiPost('deleteCategorie', { ID_Categorie: c.ID_Categorie });
+  if (res.error){ alert('Erreur : ' + res.error); return; }
+
+  await loadCategories();
+}
+
 // ---------- Démarrage ----------
 async function demarrer(){
   initFiltres();
-  await Promise.all([loadModeles(), loadModelesRevenu()]);
+  await Promise.all([loadModeles(), loadModelesRevenu(), loadCategories()]);
   ensureMonthData(currentKey());
   render();
 }
