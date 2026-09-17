@@ -306,14 +306,30 @@ input[type="checkbox"]{ width:18px; height:18px; }
   </div>
 
   <div id="viewParametres" style="display:none">
-    <div class="card">
-      <div class="card-title"><span>Modèles de charges fixes</span></div>
-      <div class="param-add-row">
-        <input class="p-libelle" id="modeleLibelleInput" type="text" placeholder="Libellé (ex : Loyer)">
-        <input class="p-montant" id="modeleMontantInput" type="number" step="0.01" placeholder="Montant">
-        <button onclick="addModele()">+ Ajouter</button>
+    <div class="cc-layout">
+      <div class="cc-col">
+        <div class="card">
+          <div class="card-title"><span>Modèles de charges fixes</span></div>
+          <div class="param-add-row">
+            <input class="p-libelle" id="modeleLibelleInput" type="text" placeholder="Libellé (ex : Loyer)">
+            <input class="p-montant" id="modeleMontantInput" type="number" step="0.01" placeholder="Montant">
+            <button onclick="addModele()">+ Ajouter</button>
+          </div>
+          <div id="modelesList"></div>
+        </div>
       </div>
-      <div id="modelesList"></div>
+
+      <div class="cc-col">
+        <div class="card">
+          <div class="card-title"><span>Modèles de revenu</span></div>
+          <div class="param-add-row">
+            <input class="p-libelle" id="modeleRevenuLibelleInput" type="text" placeholder="Libellé (ex : Salaire)">
+            <input class="p-montant" id="modeleRevenuMontantInput" type="number" step="0.01" placeholder="Montant">
+            <button onclick="addModeleRevenu()">+ Ajouter</button>
+          </div>
+          <div id="modelesRevenuList"></div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -365,6 +381,21 @@ async function loadModeles(){
   renderModeles();
 }
 
+// ---------- Modèles de revenu (Paramètres, stockés dans Data_compte) ----------
+let modelesRevenu = [];
+let modelesRevenuCharges = false;
+
+async function loadModelesRevenu(){
+  const res = await apiGet('getModelesRevenu');
+  if (res && res.error){
+    document.getElementById('modelesRevenuList').innerHTML = `<div class="placeholder" style="padding:20px;color:var(--red);">Erreur : ${res.error}</div>`;
+    return;
+  }
+  modelesRevenu = res || [];
+  modelesRevenuCharges = true;
+  renderModelesRevenu();
+}
+
 // ---------- Données par mois (clé "AAAA-MM") ----------
 // data[cle] n'existe que si ce mois a déjà été "initialisé" (première visite) :
 // c'est ce qui empêche de ré-insérer les charges fixes à chaque changement de filtre.
@@ -386,7 +417,11 @@ function currentKey(){
 function ensureMonthData(key){
   if (data[key]) return;
   data[key] = {
-    revenus: [],
+    revenus: modelesRevenu.map(m => ({
+      date: '',
+      libelle: m.Libelle,
+      montant: m.Montant
+    })),
     chargesFixes: modelesChargeFixe.map(m => ({
       coche: false,
       date: '',
@@ -433,7 +468,7 @@ function showView(view){
   document.getElementById('navComptes').classList.toggle('active', view === 'comptes');
   document.getElementById('navParametres').classList.toggle('active', view === 'parametres');
   closeNav();
-  if (view === 'parametres') loadModeles();
+  if (view === 'parametres'){ loadModeles(); loadModelesRevenu(); }
 }
 
 // ---------- Onglets internes (CC / Livret A / PEL / Récap) ----------
@@ -634,10 +669,61 @@ async function removeModele(i){
   await loadModeles();
 }
 
+// ---------- Paramètres : modèles de revenu ----------
+function renderModelesRevenu(){
+  const list = document.getElementById('modelesRevenuList');
+  if (!modelesRevenuCharges){
+    list.innerHTML = '<div class="placeholder" style="padding:20px;">Chargement...</div>';
+    return;
+  }
+  if (!modelesRevenu.length){
+    list.innerHTML = '<div class="placeholder" style="padding:20px;">Aucun modèle pour l\'instant.</div>';
+    return;
+  }
+  list.innerHTML = modelesRevenu.map((m, i) => `
+    <div class="param-item">
+      <input class="p-libelle" type="text" value="${m.Libelle}" onchange="updateModeleRevenuField(${i}, 'Libelle', this.value)">
+      <input class="p-montant" type="number" step="0.01" value="${m.Montant}" onchange="updateModeleRevenuField(${i}, 'Montant', this.value)">
+      <button class="btn-delete" onclick="removeModeleRevenu(${i})">✕</button>
+    </div>
+  `).join('');
+}
+
+async function addModeleRevenu(){
+  const libelle = document.getElementById('modeleRevenuLibelleInput').value.trim();
+  const montant = document.getElementById('modeleRevenuMontantInput').value;
+  if (!libelle){ alert('Entre un libellé'); return; }
+
+  const res = await apiPost('addModeleRevenu', { Libelle: libelle, Montant: parseFloat(montant) || 0 });
+  if (res.error){ alert('Erreur : ' + res.error); return; }
+
+  document.getElementById('modeleRevenuLibelleInput').value = '';
+  document.getElementById('modeleRevenuMontantInput').value = '';
+  await loadModelesRevenu();
+}
+
+async function updateModeleRevenuField(i, champ, valeur){
+  const m = modelesRevenu[i];
+  m[champ] = champ === 'Montant' ? (parseFloat(valeur) || 0) : valeur;
+
+  const res = await apiPost('updateModeleRevenu', { ID_Modele: m.ID_Modele, Libelle: m.Libelle, Montant: m.Montant });
+  if (res.error){ alert('Erreur : ' + res.error); await loadModelesRevenu(); }
+}
+
+async function removeModeleRevenu(i){
+  if (!confirm('Supprimer ce modèle ? Les revenus déjà insérés dans les mois existants ne seront pas touchés.')) return;
+
+  const m = modelesRevenu[i];
+  const res = await apiPost('deleteModeleRevenu', { ID_Modele: m.ID_Modele });
+  if (res.error){ alert('Erreur : ' + res.error); return; }
+
+  await loadModelesRevenu();
+}
+
 // ---------- Démarrage ----------
 async function demarrer(){
   initFiltres();
-  await loadModeles();
+  await Promise.all([loadModeles(), loadModelesRevenu()]);
   ensureMonthData(currentKey());
   render();
 }
