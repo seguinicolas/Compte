@@ -104,6 +104,62 @@ main{ max-width:1900px; margin:0 auto; padding:16px; }
   color:var(--ink);
 }
 
+.top-row{
+  display:flex;
+  gap:16px;
+  align-items:flex-start;
+  margin-bottom:16px;
+}
+
+.info-panel{
+  width:100%;
+  border-radius:var(--radius);
+  padding:12px 16px;
+  font-size:0.85rem;
+}
+.reste-grid{
+  display:flex;
+  gap:16px;
+}
+.reste-col{ flex:1; min-width:0; }
+.info-panel-title{
+  font-weight:800;
+  text-align:center;
+  margin-bottom:8px;
+  font-size:0.85rem;
+}
+.info-row{
+  display:flex;
+  justify-content:space-between;
+  gap:8px;
+  padding:4px 0;
+}
+.info-row input{
+  width:90px;
+  text-align:right;
+  border:1px solid var(--line);
+  border-radius:6px;
+  padding:3px 6px;
+  font-family:inherit;
+  font-size:0.85rem;
+}
+
+.panel-reste{ background:var(--blush); }
+.panel-reste .info-row.decaissement{ color:var(--red); font-weight:700; }
+.panel-reste .info-row.encaissement{ color:var(--sage-dark); font-weight:700; }
+.panel-reste .info-row.total{ background:var(--sage); color:var(--white); font-weight:800; border-radius:8px; padding:6px 10px; margin-top:6px; }
+
+.panel-categories{ background:#F6D9BC; }
+.panel-categories .info-row{ color:var(--sage-dark); }
+.panel-categories .info-row .cat-pct{ color:var(--ink-soft); font-weight:400; margin-left:4px; }
+.panel-categories .info-row.total{ background:var(--white); font-weight:800; border-radius:8px; padding:6px 10px; margin-top:6px; }
+#categoriesDetail{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  column-gap:14px;
+}
+#categoriesDetail .info-row.total{ grid-column:1 / -1; }
+
 .tabs{
   display:flex;
   gap:8px;
@@ -132,8 +188,13 @@ main{ max-width:1900px; margin:0 auto; padding:16px; }
   flex:1;
   min-width:0;
 }
+.cc-col-narrow{ flex:0.8; min-width:0; }
+.cc-col-medium{ flex:1; min-width:0; }
+.cc-col-wide{ flex:1.2; min-width:0; }
 @media (max-width: 900px){
   .cc-layout{ flex-direction:column; }
+  .cc-col-narrow, .cc-col-medium, .cc-col-wide{ flex:1; }
+  .top-row{ flex-direction:column; }
 }
 
 .card{
@@ -161,18 +222,18 @@ main{ max-width:1900px; margin:0 auto; padding:16px; }
   letter-spacing:0;
 }
 
-table{ width:100%; border-collapse:collapse; font-size:0.88rem; }
+table{ width:100%; border-collapse:collapse; font-size:0.82rem; }
 th{
   text-align:left;
-  padding:6px 8px;
+  padding:5px 6px;
   border-bottom:2px solid var(--line);
   color:var(--ink-soft);
-  font-size:0.72rem;
+  font-size:0.68rem;
   text-transform:uppercase;
   letter-spacing:0.03em;
 }
 td{
-  padding:6px 8px;
+  padding:3px 6px;
   border-bottom:1px solid var(--line);
 }
 tr.coche td{ background:#E6F0EA; }
@@ -185,10 +246,10 @@ input[type="checkbox"]{ width:18px; height:18px; }
 .row-input{
   width:100%;
   border:1px solid var(--line);
-  border-radius:8px;
-  padding:6px 8px;
+  border-radius:6px;
+  padding:4px 6px;
   font-family:inherit;
-  font-size:0.85rem;
+  font-size:0.8rem;
   background:var(--white);
   color:var(--ink);
 }
@@ -217,6 +278,17 @@ input[type="checkbox"]{ width:18px; height:18px; }
   cursor:pointer;
 }
 .btn-add:hover{ background:var(--blush); }
+
+.scroll-table{
+  max-height:60vh;
+  overflow-y:auto;
+}
+.scroll-table table thead{
+  position:sticky;
+  top:0;
+  background:var(--white);
+  z-index:1;
+}
 
 .placeholder{
   text-align:center;
@@ -291,19 +363,47 @@ input[type="checkbox"]{ width:18px; height:18px; }
 <main>
 
   <div id="viewComptes">
-    <div class="filters">
-      <select id="filterMois" onchange="onFiltreChange()"></select>
-      <select id="filterAnnee" onchange="onFiltreChange()"></select>
+    <div class="top-row">
+      <div class="cc-col-narrow">
+        <div class="filters">
+          <select id="filterMois" onchange="onFiltreChange()"></select>
+          <select id="filterAnnee" onchange="onFiltreChange()"></select>
+        </div>
+        <div class="tabs">
+          <button class="tab-btn active" data-tab="cc" onclick="selectTab('cc')">CC</button>
+          <button class="tab-btn" data-tab="livretA" onclick="selectTab('livretA')">Livret A</button>
+          <button class="tab-btn" data-tab="pel" onclick="selectTab('pel')">PEL</button>
+          <button class="tab-btn disabled" data-tab="recap" onclick="selectTab('recap')">Récap</button>
+        </div>
+      </div>
+
+      <div class="cc-col-medium">
+        <div class="info-panel panel-reste">
+          <div class="info-panel-title">Reste à vivre</div>
+          <div class="reste-grid">
+            <div class="reste-col">
+              <div class="info-row"><span>Report mois précédent</span><span>0.00 €</span></div>
+              <div class="info-row"><span>Trésorerie (banque)</span><span id="tresorerieValue">0.00 €</span></div>
+              <div class="info-row"><span>Différence livret A</span><input type="number" step="0.01" placeholder="0.00" id="differenceLivretAInput"></div>
+            </div>
+            <div class="reste-col">
+              <div class="info-row decaissement"><span>Décaissement à venir</span><span id="decaissementAVenir">0.00 €</span></div>
+              <div class="info-row encaissement"><span>Encaissement à venir</span><span id="encaissementAVenir">0.00 €</span></div>
+            </div>
+          </div>
+          <div class="info-row total"><span>Total reste à vivre</span><span>—</span></div>
+        </div>
+      </div>
+
+      <div class="cc-col-wide">
+        <div class="info-panel panel-categories">
+          <div class="info-panel-title">Catégories</div>
+          <div id="categoriesDetail"></div>
+        </div>
+      </div>
     </div>
 
-    <div class="tabs">
-      <button class="tab-btn active" data-tab="cc" onclick="selectTab('cc')">CC</button>
-      <button class="tab-btn disabled" data-tab="livretA" onclick="selectTab('livretA')">Livret A</button>
-      <button class="tab-btn disabled" data-tab="pel" onclick="selectTab('pel')">PEL</button>
-      <button class="tab-btn disabled" data-tab="recap" onclick="selectTab('recap')">Récap</button>
-    </div>
-
-    <div id="tabContent"></div>
+    <div id="tabContent"><div class="placeholder">Chargement...</div></div>
   </div>
 
   <div id="viewParametres" style="display:none">
@@ -340,6 +440,18 @@ input[type="checkbox"]{ width:18px; height:18px; }
             <button onclick="addCategorie()">+ Ajouter</button>
           </div>
           <div id="categoriesList"></div>
+        </div>
+      </div>
+
+      <div class="cc-col">
+        <div class="card">
+          <div class="card-title"><span>Enveloppes (Livret A)</span></div>
+          <div class="param-add-row">
+            <input class="p-libelle" id="enveloppeLibelleInput" type="text" placeholder="Libellé (ex : Voiture)">
+            <input class="p-montant" id="enveloppeObjectifInput" type="number" step="0.01" placeholder="Objectif">
+            <button onclick="addEnveloppe()">+ Ajouter</button>
+          </div>
+          <div id="enveloppesList"></div>
         </div>
       </div>
     </div>
@@ -481,7 +593,7 @@ function showView(view){
   document.getElementById('navComptes').classList.toggle('active', view === 'comptes');
   document.getElementById('navParametres').classList.toggle('active', view === 'parametres');
   closeNav();
-  if (view === 'parametres'){ loadModeles(); loadModelesRevenu(); loadCategories(); }
+  if (view === 'parametres'){ loadModeles(); loadModelesRevenu(); loadCategories(); loadEnveloppes(); }
 }
 
 // ---------- Onglets internes (CC / Livret A / PEL / Récap) ----------
@@ -503,10 +615,176 @@ function num(v){
 
 function render(){
   if (currentTab === 'cc') renderCC();
-  else if (currentTab === 'livretA') renderPlaceholder('Livret A');
-  else if (currentTab === 'pel') renderPlaceholder('PEL');
+  else if (currentTab === 'livretA') renderLivretA();
+  else if (currentTab === 'pel') renderPel();
   else if (currentTab === 'recap') renderPlaceholder('Récap');
 }
+
+// ---------- Livret A (pas de filtre mois/année : historique continu, réparti en enveloppes) ----------
+let livretAData = [
+  { date: '', libelle: '', somme: '', allocations: {} }
+];
+
+function renderLivretA(){
+  const container = document.getElementById('tabContent');
+  const envHeaders = enveloppes.map(e =>
+    `<th colspan="2" class="center">${e.Libelle}${e.Objectif ? '<br><span style="font-weight:400;font-size:0.65rem;">Objectif : ' + num(e.Objectif).toFixed(2) + ' €</span>' : ''}</th>`
+  ).join('');
+  const envSubHeaders = enveloppes.map(() =>
+    `<th class="center" style="width:90px">Crédit/Débit</th><th class="center" style="width:90px">Total</th>`
+  ).join('');
+
+  container.innerHTML = `
+    <div class="card">
+      <div class="card-title"><span>Livret A</span></div>
+      <div class="scroll-table" style="max-height:70vh;">
+        <table>
+          <thead>
+            <tr>
+              <th rowspan="2" style="width:110px">Date</th>
+              <th rowspan="2">Libellé</th>
+              <th rowspan="2" style="width:100px">Somme</th>
+              <th rowspan="2" style="width:100px">Total</th>
+              <th rowspan="2" style="width:90px">Reste</th>
+              ${envHeaders}
+              <th rowspan="2" style="width:30px"></th>
+            </tr>
+            <tr>${envSubHeaders}</tr>
+          </thead>
+          <tbody id="livretABody"></tbody>
+        </table>
+      </div>
+      <button class="btn-add" onclick="addLivretALigne()">+ Ajouter une opération</button>
+    </div>
+  `;
+  renderLivretARows();
+}
+
+function renderLivretARows(){
+  const body = document.getElementById('livretABody');
+  let runningTotal = 0;
+  const runningEnvTotals = {};
+  enveloppes.forEach(e => { runningEnvTotals[e.ID_Enveloppe] = 0; });
+
+  body.innerHTML = livretAData.map((l, i) => {
+    runningTotal += num(l.somme);
+
+    let allocSum = 0;
+    const envCells = enveloppes.map(e => {
+      const val = l.allocations[e.ID_Enveloppe] || '';
+      allocSum += num(val);
+      runningEnvTotals[e.ID_Enveloppe] += num(val);
+      return `
+        <td><input class="row-input amt-input" type="number" step="0.01" value="${val}" oninput="setLivretAAllocation(${i}, '${e.ID_Enveloppe}', this.value)"></td>
+        <td class="amt" id="livretAEnvTotal-${e.ID_Enveloppe}-${i}">${runningEnvTotals[e.ID_Enveloppe].toFixed(2)} €</td>
+      `;
+    }).join('');
+
+    const reste = num(l.somme) - allocSum;
+    const resteStyle = Math.abs(reste) > 0.004 ? 'color:var(--red);font-weight:700;' : '';
+
+    return `
+      <tr>
+        <td><input class="row-input" type="date" value="${l.date}" onchange="livretAData[${i}].date=this.value"></td>
+        <td><input class="row-input" type="text" value="${l.libelle}" placeholder="Ex : Dépôt CC" onchange="livretAData[${i}].libelle=this.value"></td>
+        <td><input class="row-input amt-input" type="number" step="0.01" value="${l.somme}" placeholder="0.00" oninput="livretAData[${i}].somme=this.value; updateLivretATotals();"></td>
+        <td class="amt" id="livretATotal-${i}">${runningTotal.toFixed(2)} €</td>
+        <td class="amt" id="livretAReste-${i}" style="${resteStyle}">${reste.toFixed(2)} €</td>
+        ${envCells}
+        <td><button class="btn-delete" onclick="removeLivretALigne(${i})">✕</button></td>
+      </tr>
+    `;
+  }).join('');
+}
+
+// Recalcule Total, Total par enveloppe et Reste pour toutes les lignes, sans reconstruire
+// les champs de saisie (sinon on perd le focus en tapant, comme pour les autres tableaux).
+function updateLivretATotals(){
+  let runningTotal = 0;
+  const runningEnvTotals = {};
+  enveloppes.forEach(e => { runningEnvTotals[e.ID_Enveloppe] = 0; });
+
+  livretAData.forEach((l, i) => {
+    runningTotal += num(l.somme);
+    const totalCell = document.getElementById('livretATotal-' + i);
+    if (totalCell) totalCell.textContent = runningTotal.toFixed(2) + ' €';
+
+    let allocSum = 0;
+    enveloppes.forEach(e => {
+      const val = l.allocations[e.ID_Enveloppe] || '';
+      allocSum += num(val);
+      runningEnvTotals[e.ID_Enveloppe] += num(val);
+      const cell = document.getElementById('livretAEnvTotal-' + e.ID_Enveloppe + '-' + i);
+      if (cell) cell.textContent = runningEnvTotals[e.ID_Enveloppe].toFixed(2) + ' €';
+    });
+
+    const reste = num(l.somme) - allocSum;
+    const resteCell = document.getElementById('livretAReste-' + i);
+    if (resteCell){
+      resteCell.textContent = reste.toFixed(2) + ' €';
+      resteCell.style.color = Math.abs(reste) > 0.004 ? 'var(--red)' : '';
+      resteCell.style.fontWeight = Math.abs(reste) > 0.004 ? '700' : '';
+    }
+  });
+}
+
+function setLivretAAllocation(i, envId, valeur){
+  livretAData[i].allocations[envId] = valeur;
+  updateLivretATotals();
+}
+
+function addLivretALigne(){ livretAData.push({ date:'', libelle:'', somme:'', allocations:{} }); renderLivretARows(); }
+function removeLivretALigne(i){ livretAData.splice(i,1); renderLivretARows(); }
+
+// ---------- PEL (pas de filtre mois/année : historique continu) ----------
+let pelData = [
+  { date: '', libelle: '', montant: '' }
+];
+
+function renderPel(){
+  const container = document.getElementById('tabContent');
+  container.innerHTML = `
+    <div class="card" style="max-width:700px;">
+      <div class="card-title"><span>PEL</span></div>
+      <table>
+        <thead><tr><th style="width:120px">Date</th><th>Libellé</th><th style="width:110px">Somme</th><th style="width:110px">Solde</th><th style="width:30px"></th></tr></thead>
+        <tbody id="pelBody"></tbody>
+      </table>
+      <button class="btn-add" onclick="addPelLigne()">+ Ajouter une opération</button>
+    </div>
+  `;
+  renderPelRows();
+}
+
+function renderPelRows(){
+  const body = document.getElementById('pelBody');
+  let solde = 0;
+  body.innerHTML = pelData.map((p, i) => {
+    solde += num(p.montant);
+    return `
+      <tr>
+        <td><input class="row-input" type="date" value="${p.date}" onchange="pelData[${i}].date=this.value"></td>
+        <td><input class="row-input" type="text" value="${p.libelle}" placeholder="Ex : Dépôt, Retrait..." onchange="pelData[${i}].libelle=this.value"></td>
+        <td><input class="row-input amt-input" type="number" step="0.01" value="${p.montant}" placeholder="+ dépôt / - retrait" oninput="pelData[${i}].montant=this.value; updatePelSoldes();"></td>
+        <td class="amt" id="pelSolde-${i}">${solde.toFixed(2)} €</td>
+        <td><button class="btn-delete" onclick="removePelLigne(${i})">✕</button></td>
+      </tr>
+    `;
+  }).join('');
+}
+
+// Recalcule uniquement la colonne Solde (en cascade), sans reconstruire les champs de saisie.
+function updatePelSoldes(){
+  let solde = 0;
+  pelData.forEach((p, i) => {
+    solde += num(p.montant);
+    const cell = document.getElementById('pelSolde-' + i);
+    if (cell) cell.textContent = solde.toFixed(2) + ' €';
+  });
+}
+
+function addPelLigne(){ pelData.push({ date:'', libelle:'', montant:'' }); renderPelRows(); }
+function removePelLigne(i){ pelData.splice(i,1); renderPelRows(); }
 
 function renderPlaceholder(label){
   document.getElementById('tabContent').innerHTML = `<div class="placeholder">🚧 ${label} — à construire prochainement.</div>`;
@@ -525,11 +803,11 @@ function renderCC(){
   const container = document.getElementById('tabContent');
   container.innerHTML = `
     <div class="cc-layout">
-      <div class="cc-col">
+      <div class="cc-col-narrow">
         <div class="card">
           <div class="card-title">
             <span>Revenu</span>
-            <span class="total">${totalRevenus.toFixed(2)} €</span>
+            <span class="total" id="totalRevenuSpan">${totalRevenus.toFixed(2)} €</span>
           </div>
           <table>
             <thead><tr><th class="center" style="width:34px">✓</th><th style="width:120px">Date</th><th>Libellé</th><th style="width:110px">Montant</th><th style="width:30px"></th></tr></thead>
@@ -539,11 +817,11 @@ function renderCC(){
         </div>
       </div>
 
-      <div class="cc-col">
+      <div class="cc-col-medium">
         <div class="card">
           <div class="card-title">
             <span>Charge fixe</span>
-            <span class="total">${totalFixesCochees.toFixed(2)} €</span>
+            <span class="total" id="totalChargeFixeSpan">${totalFixesCochees.toFixed(2)} €</span>
           </div>
           <table>
             <thead><tr><th class="center" style="width:34px">✓</th><th style="width:110px">Date</th><th>Libellé</th><th style="width:110px">Montant</th><th style="width:30px"></th></tr></thead>
@@ -553,16 +831,18 @@ function renderCC(){
         </div>
       </div>
 
-      <div class="cc-col">
+      <div class="cc-col-wide">
         <div class="card">
           <div class="card-title">
             <span>Charge variable</span>
-            <span class="total">${totalVariables.toFixed(2)} €</span>
+            <span class="total" id="totalChargeVariableSpan">${totalVariables.toFixed(2)} €</span>
           </div>
-          <table>
-            <thead><tr><th style="width:110px">Date</th><th>Libellé</th><th style="width:130px">Catégorie</th><th style="width:100px">Montant</th><th style="width:30px"></th></tr></thead>
-            <tbody id="chargeVariableBody"></tbody>
-          </table>
+          <div class="scroll-table">
+            <table>
+              <thead><tr><th style="width:110px">Date</th><th>Libellé</th><th style="width:130px">Catégorie</th><th style="width:100px">Montant</th><th style="width:30px"></th></tr></thead>
+              <tbody id="chargeVariableBody"></tbody>
+            </table>
+          </div>
           <button class="btn-add" onclick="addChargeVariable()">+ Ajouter une charge variable</button>
         </div>
       </div>
@@ -572,6 +852,57 @@ function renderCC(){
   renderRevenuRows();
   renderChargeFixeRows();
   renderChargeVariableRows();
+  renderInfoPanels();
+}
+
+// Recalcule uniquement les totaux affichés, sans reconstruire les lignes de saisie
+// (sinon retaper dans un champ Montant perdrait le focus à chaque caractère).
+function updateCCTotals(){
+  const key = currentKey();
+  const mois = data[key];
+
+  const totalRevenus = mois.revenus.filter(r => r.coche).reduce((s, r) => s + num(r.montant), 0);
+  const totalFixesCochees = mois.chargesFixes.filter(c => c.coche).reduce((s, c) => s + num(c.montant), 0);
+  const totalVariables = mois.chargesVariables.reduce((s, c) => s + num(c.montant), 0);
+
+  document.getElementById('totalRevenuSpan').textContent = totalRevenus.toFixed(2) + ' €';
+  document.getElementById('totalChargeFixeSpan').textContent = totalFixesCochees.toFixed(2) + ' €';
+  document.getElementById('totalChargeVariableSpan').textContent = totalVariables.toFixed(2) + ' €';
+
+  renderInfoPanels();
+}
+
+function renderInfoPanels(){
+  const key = currentKey();
+  const mois = data[key];
+
+  const reportMoisPrecedent = 0; // pas encore relié au mois précédent
+  const totalRevenuCoche = mois.revenus.filter(r => r.coche).reduce((s, r) => s + num(r.montant), 0);
+  const totalChargeFixeCochee = mois.chargesFixes.filter(c => c.coche).reduce((s, c) => s + num(c.montant), 0);
+  const totalChargeVariable = mois.chargesVariables.reduce((s, c) => s + num(c.montant), 0);
+
+  const tresorerie = reportMoisPrecedent - totalChargeVariable - totalChargeFixeCochee + totalRevenuCoche;
+  document.getElementById('tresorerieValue').textContent = tresorerie.toFixed(2) + ' €';
+
+  const decaissement = mois.chargesFixes.filter(c => !c.coche).reduce((s, c) => s + num(c.montant), 0);
+  const encaissement = mois.revenus.filter(r => !r.coche).reduce((s, r) => s + num(r.montant), 0);
+  document.getElementById('decaissementAVenir').textContent = decaissement.toFixed(2) + ' €';
+  document.getElementById('encaissementAVenir').textContent = encaissement.toFixed(2) + ' €';
+
+  const totalVariables = totalChargeVariable;
+  const parCategorie = {};
+  categories.forEach(c => { parCategorie[c.Libelle] = 0; });
+  mois.chargesVariables.forEach(c => {
+    if (!(c.categorie in parCategorie)) parCategorie[c.categorie] = 0;
+    parCategorie[c.categorie] += num(c.montant);
+  });
+
+  const catDiv = document.getElementById('categoriesDetail');
+  catDiv.innerHTML = Object.keys(parCategorie).map(lib => {
+    const montant = parCategorie[lib];
+    const pct = totalVariables > 0 ? Math.round(montant / totalVariables * 100) : 0;
+    return `<div class="info-row"><span>${lib}</span><span>${montant.toFixed(2)} € <span class="cat-pct">${pct}%</span></span></div>`;
+  }).join('') + `<div class="info-row total"><span>Total</span><span>${totalVariables.toFixed(2)} €</span></div>`;
 }
 
 function renderRevenuRows(){
@@ -583,7 +914,7 @@ function renderRevenuRows(){
       <td class="center"><input type="checkbox" ${r.coche ? 'checked' : ''} onchange="data['${key}'].revenus[${i}].coche=this.checked; renderCC();"></td>
       <td><input class="row-input" type="date" value="${r.date}" onchange="data['${key}'].revenus[${i}].date=this.value"></td>
       <td><input class="row-input" type="text" value="${r.libelle}" placeholder="Ex : Salaire" onchange="data['${key}'].revenus[${i}].libelle=this.value"></td>
-      <td><input class="row-input amt-input" type="number" step="0.01" value="${r.montant}" placeholder="0.00" oninput="data['${key}'].revenus[${i}].montant=this.value; renderCC();"></td>
+      <td><input class="row-input amt-input" type="number" step="0.01" value="${r.montant}" placeholder="0.00" oninput="data['${key}'].revenus[${i}].montant=this.value; updateCCTotals();"></td>
       <td><button class="btn-delete" onclick="removeRevenu(${i})">✕</button></td>
     </tr>
   `).join('');
@@ -598,7 +929,7 @@ function renderChargeFixeRows(){
       <td class="center"><input type="checkbox" ${c.coche ? 'checked' : ''} onchange="data['${key}'].chargesFixes[${i}].coche=this.checked; renderCC();"></td>
       <td><input class="row-input" type="date" value="${c.date}" onchange="data['${key}'].chargesFixes[${i}].date=this.value"></td>
       <td><input class="row-input" type="text" value="${c.libelle}" placeholder="Ex : Loyer" onchange="data['${key}'].chargesFixes[${i}].libelle=this.value"></td>
-      <td><input class="row-input amt-input" type="number" step="0.01" value="${c.montant}" placeholder="0.00" oninput="data['${key}'].chargesFixes[${i}].montant=this.value; renderCC();"></td>
+      <td><input class="row-input amt-input" type="number" step="0.01" value="${c.montant}" placeholder="0.00" oninput="data['${key}'].chargesFixes[${i}].montant=this.value; updateCCTotals();"></td>
       <td><button class="btn-delete" onclick="removeChargeFixe(${i})">✕</button></td>
     </tr>
   `).join('');
@@ -617,7 +948,7 @@ function renderChargeVariableRows(){
           ${categories.map(cat => `<option value="${cat.Libelle}" ${c.categorie === cat.Libelle ? 'selected' : ''}>${cat.Libelle}</option>`).join('')}
         </select>
       </td>
-      <td><input class="row-input amt-input" type="number" step="0.01" value="${c.montant}" placeholder="0.00" oninput="data['${key}'].chargesVariables[${i}].montant=this.value; renderCC();"></td>
+      <td><input class="row-input amt-input" type="number" step="0.01" value="${c.montant}" placeholder="0.00" oninput="data['${key}'].chargesVariables[${i}].montant=this.value; updateCCTotals();"></td>
       <td><button class="btn-delete" onclick="removeChargeVariable(${i})">✕</button></td>
     </tr>
   `).join('');
@@ -795,10 +1126,75 @@ async function removeCategorie(i){
   await loadCategories();
 }
 
+// ---------- Paramètres : enveloppes (Livret A) ----------
+let enveloppes = [];
+let enveloppesChargees = false;
+
+async function loadEnveloppes(){
+  const res = await apiGet('getEnveloppes');
+  if (res && res.error){
+    document.getElementById('enveloppesList').innerHTML = `<div class="placeholder" style="padding:20px;color:var(--red);">Erreur : ${res.error}</div>`;
+    return;
+  }
+  enveloppes = res || [];
+  enveloppesChargees = true;
+  renderEnveloppes();
+}
+
+function renderEnveloppes(){
+  const list = document.getElementById('enveloppesList');
+  if (!enveloppesChargees){
+    list.innerHTML = '<div class="placeholder" style="padding:20px;">Chargement...</div>';
+    return;
+  }
+  if (!enveloppes.length){
+    list.innerHTML = '<div class="placeholder" style="padding:20px;">Aucune enveloppe pour l\'instant.</div>';
+    return;
+  }
+  list.innerHTML = enveloppes.map((e, i) => `
+    <div class="param-item">
+      <input class="p-libelle" type="text" value="${e.Libelle}" onchange="updateEnveloppeField(${i}, 'Libelle', this.value)">
+      <input class="p-montant" type="number" step="0.01" value="${e.Objectif}" placeholder="Objectif" onchange="updateEnveloppeField(${i}, 'Objectif', this.value)">
+      <button class="btn-delete" onclick="removeEnveloppe(${i})">✕</button>
+    </div>
+  `).join('');
+}
+
+async function addEnveloppe(){
+  const libelle = document.getElementById('enveloppeLibelleInput').value.trim();
+  const objectif = document.getElementById('enveloppeObjectifInput').value;
+  if (!libelle){ alert('Entre un libellé'); return; }
+
+  const res = await apiPost('addEnveloppe', { Libelle: libelle, Objectif: parseFloat(objectif) || 0 });
+  if (res.error){ alert('Erreur : ' + res.error); return; }
+
+  document.getElementById('enveloppeLibelleInput').value = '';
+  document.getElementById('enveloppeObjectifInput').value = '';
+  await loadEnveloppes();
+}
+
+async function updateEnveloppeField(i, champ, valeur){
+  const e = enveloppes[i];
+  e[champ] = champ === 'Objectif' ? (parseFloat(valeur) || 0) : valeur;
+
+  const res = await apiPost('updateEnveloppe', { ID_Enveloppe: e.ID_Enveloppe, Libelle: e.Libelle, Objectif: e.Objectif });
+  if (res.error){ alert('Erreur : ' + res.error); await loadEnveloppes(); }
+}
+
+async function removeEnveloppe(i){
+  if (!confirm('Supprimer cette enveloppe ? Les répartitions déjà saisies dans le Livret A ne seront pas touchées.')) return;
+
+  const e = enveloppes[i];
+  const res = await apiPost('deleteEnveloppe', { ID_Enveloppe: e.ID_Enveloppe });
+  if (res.error){ alert('Erreur : ' + res.error); return; }
+
+  await loadEnveloppes();
+}
+
 // ---------- Démarrage ----------
 async function demarrer(){
   initFiltres();
-  await Promise.all([loadModeles(), loadModelesRevenu(), loadCategories()]);
+  await Promise.all([loadModeles(), loadModelesRevenu(), loadCategories(), loadEnveloppes()]);
   ensureMonthData(currentKey());
   render();
 }
