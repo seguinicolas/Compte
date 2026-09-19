@@ -290,6 +290,30 @@ input[type="checkbox"]{ width:18px; height:18px; }
   z-index:1;
 }
 
+.les-summary{
+  display:flex;
+  gap:12px;
+  margin-bottom:16px;
+  flex-wrap:wrap;
+}
+.les-summary-box{
+  flex:1;
+  min-width:150px;
+  background:var(--blush);
+  border-radius:12px;
+  padding:10px 14px;
+  text-align:center;
+}
+.les-summary-label{
+  font-size:0.7rem;
+  text-transform:uppercase;
+  letter-spacing:0.03em;
+  color:var(--sage-dark);
+  font-weight:700;
+  margin-bottom:4px;
+}
+.les-summary-value{ font-size:1.1rem; font-weight:800; }
+
 .placeholder{
   text-align:center;
   padding:50px 20px;
@@ -373,7 +397,10 @@ input[type="checkbox"]{ width:18px; height:18px; }
           <button class="tab-btn active" data-tab="cc" onclick="selectTab('cc')">CC</button>
           <button class="tab-btn" data-tab="livretA" onclick="selectTab('livretA')">Livret A</button>
           <button class="tab-btn" data-tab="pel" onclick="selectTab('pel')">PEL</button>
-          <button class="tab-btn disabled" data-tab="recap" onclick="selectTab('recap')">Récap</button>
+          <button class="tab-btn" data-tab="assVie" onclick="selectTab('assVie')">Ass Vie</button>
+          <button class="tab-btn" data-tab="lesPompier" onclick="selectTab('lesPompier')">LES (pompier)</button>
+          <button class="tab-btn" data-tab="eau" onclick="selectTab('eau')">Eau</button>
+          <button class="tab-btn" data-tab="recap" onclick="selectTab('recap')">Récap</button>
         </div>
       </div>
 
@@ -617,12 +644,15 @@ function render(){
   if (currentTab === 'cc') renderCC();
   else if (currentTab === 'livretA') renderLivretA();
   else if (currentTab === 'pel') renderPel();
-  else if (currentTab === 'recap') renderPlaceholder('Récap');
+  else if (currentTab === 'assVie') renderAssVie();
+  else if (currentTab === 'lesPompier') renderLesPompier();
+  else if (currentTab === 'eau') renderEau();
+  else if (currentTab === 'recap') renderRecap();
 }
 
 // ---------- Livret A (pas de filtre mois/année : historique continu, réparti en enveloppes) ----------
 let livretAData = [
-  { date: '', libelle: '', somme: '', allocations: {} }
+  { date: '', libelle: '', allocations: {} }
 ];
 
 function renderLivretA(){
@@ -645,7 +675,6 @@ function renderLivretA(){
               <th rowspan="2">Libellé</th>
               <th rowspan="2" style="width:100px">Somme</th>
               <th rowspan="2" style="width:100px">Total</th>
-              <th rowspan="2" style="width:90px">Reste</th>
               ${envHeaders}
               <th rowspan="2" style="width:30px"></th>
             </tr>
@@ -660,6 +689,11 @@ function renderLivretA(){
   renderLivretARows();
 }
 
+// Somme d'une ligne = somme de toutes ses colonnes Crédit/Débit (plus de saisie manuelle).
+function ligneSomme(l){
+  return enveloppes.reduce((s, e) => s + num(l.allocations[e.ID_Enveloppe]), 0);
+}
+
 function renderLivretARows(){
   const body = document.getElementById('livretABody');
   let runningTotal = 0;
@@ -667,12 +701,11 @@ function renderLivretARows(){
   enveloppes.forEach(e => { runningEnvTotals[e.ID_Enveloppe] = 0; });
 
   body.innerHTML = livretAData.map((l, i) => {
-    runningTotal += num(l.somme);
+    const somme = ligneSomme(l);
+    runningTotal += somme;
 
-    let allocSum = 0;
     const envCells = enveloppes.map(e => {
       const val = l.allocations[e.ID_Enveloppe] || '';
-      allocSum += num(val);
       runningEnvTotals[e.ID_Enveloppe] += num(val);
       return `
         <td><input class="row-input amt-input" type="number" step="0.01" value="${val}" oninput="setLivretAAllocation(${i}, '${e.ID_Enveloppe}', this.value)"></td>
@@ -680,16 +713,12 @@ function renderLivretARows(){
       `;
     }).join('');
 
-    const reste = num(l.somme) - allocSum;
-    const resteStyle = Math.abs(reste) > 0.004 ? 'color:var(--red);font-weight:700;' : '';
-
     return `
       <tr>
         <td><input class="row-input" type="date" value="${l.date}" onchange="livretAData[${i}].date=this.value"></td>
         <td><input class="row-input" type="text" value="${l.libelle}" placeholder="Ex : Dépôt CC" onchange="livretAData[${i}].libelle=this.value"></td>
-        <td><input class="row-input amt-input" type="number" step="0.01" value="${l.somme}" placeholder="0.00" oninput="livretAData[${i}].somme=this.value; updateLivretATotals();"></td>
+        <td class="amt" id="livretASomme-${i}">${somme.toFixed(2)} €</td>
         <td class="amt" id="livretATotal-${i}">${runningTotal.toFixed(2)} €</td>
-        <td class="amt" id="livretAReste-${i}" style="${resteStyle}">${reste.toFixed(2)} €</td>
         ${envCells}
         <td><button class="btn-delete" onclick="removeLivretALigne(${i})">✕</button></td>
       </tr>
@@ -697,7 +726,7 @@ function renderLivretARows(){
   }).join('');
 }
 
-// Recalcule Total, Total par enveloppe et Reste pour toutes les lignes, sans reconstruire
+// Recalcule Somme, Total et les totaux par enveloppe pour toutes les lignes, sans reconstruire
 // les champs de saisie (sinon on perd le focus en tapant, comme pour les autres tableaux).
 function updateLivretATotals(){
   let runningTotal = 0;
@@ -705,26 +734,21 @@ function updateLivretATotals(){
   enveloppes.forEach(e => { runningEnvTotals[e.ID_Enveloppe] = 0; });
 
   livretAData.forEach((l, i) => {
-    runningTotal += num(l.somme);
+    const somme = ligneSomme(l);
+    runningTotal += somme;
+
+    const sommeCell = document.getElementById('livretASomme-' + i);
+    if (sommeCell) sommeCell.textContent = somme.toFixed(2) + ' €';
+
     const totalCell = document.getElementById('livretATotal-' + i);
     if (totalCell) totalCell.textContent = runningTotal.toFixed(2) + ' €';
 
-    let allocSum = 0;
     enveloppes.forEach(e => {
       const val = l.allocations[e.ID_Enveloppe] || '';
-      allocSum += num(val);
       runningEnvTotals[e.ID_Enveloppe] += num(val);
       const cell = document.getElementById('livretAEnvTotal-' + e.ID_Enveloppe + '-' + i);
       if (cell) cell.textContent = runningEnvTotals[e.ID_Enveloppe].toFixed(2) + ' €';
     });
-
-    const reste = num(l.somme) - allocSum;
-    const resteCell = document.getElementById('livretAReste-' + i);
-    if (resteCell){
-      resteCell.textContent = reste.toFixed(2) + ' €';
-      resteCell.style.color = Math.abs(reste) > 0.004 ? 'var(--red)' : '';
-      resteCell.style.fontWeight = Math.abs(reste) > 0.004 ? '700' : '';
-    }
   });
 }
 
@@ -733,7 +757,7 @@ function setLivretAAllocation(i, envId, valeur){
   updateLivretATotals();
 }
 
-function addLivretALigne(){ livretAData.push({ date:'', libelle:'', somme:'', allocations:{} }); renderLivretARows(); }
+function addLivretALigne(){ livretAData.push({ date:'', libelle:'', allocations:{} }); renderLivretARows(); }
 function removeLivretALigne(i){ livretAData.splice(i,1); renderLivretARows(); }
 
 // ---------- PEL (pas de filtre mois/année : historique continu) ----------
@@ -785,6 +809,220 @@ function updatePelSoldes(){
 
 function addPelLigne(){ pelData.push({ date:'', libelle:'', montant:'' }); renderPelRows(); }
 function removePelLigne(i){ pelData.splice(i,1); renderPelRows(); }
+
+// ---------- Assurance vie (mêmes colonnes que le PEL, données indépendantes) ----------
+let assVieData = [
+  { date: '', libelle: '', montant: '' }
+];
+
+function renderAssVie(){
+  const container = document.getElementById('tabContent');
+  container.innerHTML = `
+    <div class="card" style="max-width:700px;">
+      <div class="card-title"><span>Assurance vie</span></div>
+      <table>
+        <thead><tr><th style="width:120px">Date</th><th>Libellé</th><th style="width:110px">Somme</th><th style="width:110px">Solde</th><th style="width:30px"></th></tr></thead>
+        <tbody id="assVieBody"></tbody>
+      </table>
+      <button class="btn-add" onclick="addAssVieLigne()">+ Ajouter une opération</button>
+    </div>
+  `;
+  renderAssVieRows();
+}
+
+function renderAssVieRows(){
+  const body = document.getElementById('assVieBody');
+  let solde = 0;
+  body.innerHTML = assVieData.map((p, i) => {
+    solde += num(p.montant);
+    return `
+      <tr>
+        <td><input class="row-input" type="date" value="${p.date}" onchange="assVieData[${i}].date=this.value"></td>
+        <td><input class="row-input" type="text" value="${p.libelle}" placeholder="Ex : Versement, Retrait..." onchange="assVieData[${i}].libelle=this.value"></td>
+        <td><input class="row-input amt-input" type="number" step="0.01" value="${p.montant}" placeholder="+ dépôt / - retrait" oninput="assVieData[${i}].montant=this.value; updateAssVieSoldes();"></td>
+        <td class="amt" id="assVieSolde-${i}">${solde.toFixed(2)} €</td>
+        <td><button class="btn-delete" onclick="removeAssVieLigne(${i})">✕</button></td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function updateAssVieSoldes(){
+  let solde = 0;
+  assVieData.forEach((p, i) => {
+    solde += num(p.montant);
+    const cell = document.getElementById('assVieSolde-' + i);
+    if (cell) cell.textContent = solde.toFixed(2) + ' €';
+  });
+}
+
+function addAssVieLigne(){ assVieData.push({ date:'', libelle:'', montant:'' }); renderAssVieRows(); }
+function removeAssVieLigne(i){ assVieData.splice(i,1); renderAssVieRows(); }
+
+// ---------- LES (pompier) ----------
+let lesPompierData = [
+  { date: '', libelle: '', sommeRecu: '', dateRemb: '', sommeVirer: '' }
+];
+
+function renderLesPompier(){
+  const container = document.getElementById('tabContent');
+  container.innerHTML = `
+    <div class="card" style="max-width:1000px;">
+      <div class="card-title"><span>LES (pompier)</span></div>
+
+      <div class="les-summary">
+        <div class="les-summary-box"><div class="les-summary-label">Reste à virer</div><div class="les-summary-value" id="lesResteAVirer">0.00 €</div></div>
+        <div class="les-summary-box"><div class="les-summary-label">Solde sur compte</div><div class="les-summary-value" id="lesSoldeCompteBox">0.00 €</div></div>
+        <div class="les-summary-box"><div class="les-summary-label">Solde perçu</div><div class="les-summary-value" id="lesSoldePercuBox">0.00 €</div></div>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th style="width:110px">Date</th>
+            <th>Libellé</th>
+            <th style="width:100px">Somme reçu</th>
+            <th style="width:100px">Solde reçu</th>
+            <th style="width:110px">Date remb</th>
+            <th style="width:100px">Somme à virer</th>
+            <th style="width:100px">Solde compte</th>
+            <th style="width:30px"></th>
+          </tr>
+        </thead>
+        <tbody id="lesPompierBody"></tbody>
+      </table>
+      <button class="btn-add" onclick="addLesPompierLigne()">+ Ajouter une opération</button>
+    </div>
+  `;
+  renderLesPompierRows();
+}
+
+function renderLesPompierRows(){
+  const body = document.getElementById('lesPompierBody');
+  let soldeRecu = 0;
+  let soldeCompte = 0;
+  body.innerHTML = lesPompierData.map((l, i) => {
+    soldeRecu += num(l.sommeRecu);
+    soldeCompte += num(l.sommeVirer);
+    return `
+      <tr>
+        <td><input class="row-input" type="date" value="${l.date}" onchange="lesPompierData[${i}].date=this.value"></td>
+        <td><input class="row-input" type="text" value="${l.libelle}" placeholder="Ex : Indemnité intervention" onchange="lesPompierData[${i}].libelle=this.value"></td>
+        <td><input class="row-input amt-input" type="number" step="0.01" value="${l.sommeRecu}" placeholder="0.00" oninput="lesPompierData[${i}].sommeRecu=this.value; updateLesPompierSoldes();"></td>
+        <td class="amt" id="lesPompierSoldeRecu-${i}">${soldeRecu.toFixed(2)} €</td>
+        <td><input class="row-input" type="date" value="${l.dateRemb}" onchange="lesPompierData[${i}].dateRemb=this.value"></td>
+        <td><input class="row-input amt-input" type="number" step="0.01" value="${l.sommeVirer}" placeholder="0.00" oninput="lesPompierData[${i}].sommeVirer=this.value; updateLesPompierSoldes();"></td>
+        <td class="amt" id="lesPompierSoldeCompte-${i}">${soldeCompte.toFixed(2)} €</td>
+        <td><button class="btn-delete" onclick="removeLesPompierLigne(${i})">✕</button></td>
+      </tr>
+    `;
+  }).join('');
+  updateLesPompierSummary(soldeRecu, soldeCompte);
+}
+
+// Met à jour les 3 encarts : Solde perçu et Solde sur compte reprennent la dernière valeur
+// cumulée des colonnes Solde reçu / Solde compte ; Reste à virer est leur différence.
+function updateLesPompierSummary(soldeRecuFinal, soldeCompteFinal){
+  document.getElementById('lesSoldePercuBox').textContent = soldeRecuFinal.toFixed(2) + ' €';
+  document.getElementById('lesSoldeCompteBox').textContent = soldeCompteFinal.toFixed(2) + ' €';
+  document.getElementById('lesResteAVirer').textContent = (soldeCompteFinal - soldeRecuFinal).toFixed(2) + ' €';
+}
+
+// Recalcule Solde reçu et Solde compte (en cascade), sans reconstruire les champs de saisie.
+function updateLesPompierSoldes(){
+  let soldeRecu = 0;
+  let soldeCompte = 0;
+  lesPompierData.forEach((l, i) => {
+    soldeRecu += num(l.sommeRecu);
+    soldeCompte += num(l.sommeVirer);
+    const cellRecu = document.getElementById('lesPompierSoldeRecu-' + i);
+    if (cellRecu) cellRecu.textContent = soldeRecu.toFixed(2) + ' €';
+    const cellCompte = document.getElementById('lesPompierSoldeCompte-' + i);
+    if (cellCompte) cellCompte.textContent = soldeCompte.toFixed(2) + ' €';
+  });
+  updateLesPompierSummary(soldeRecu, soldeCompte);
+}
+
+function addLesPompierLigne(){ lesPompierData.push({ date:'', libelle:'', sommeRecu:'', dateRemb:'', sommeVirer:'' }); renderLesPompierRows(); }
+function removeLesPompierLigne(i){ lesPompierData.splice(i,1); renderLesPompierRows(); }
+
+// ---------- Eau (simple suivi : Date, Désignation, Somme — pas de solde) ----------
+let eauData = [
+  { date: '', designation: '', somme: '' }
+];
+
+function renderEau(){
+  const container = document.getElementById('tabContent');
+  container.innerHTML = `
+    <div class="card" style="max-width:600px;">
+      <div class="card-title"><span>Eau</span></div>
+      <table>
+        <thead><tr><th style="width:120px">Date</th><th>Désignation</th><th style="width:110px">Somme</th><th style="width:30px"></th></tr></thead>
+        <tbody id="eauBody"></tbody>
+      </table>
+      <button class="btn-add" onclick="addEauLigne()">+ Ajouter un relevé</button>
+    </div>
+  `;
+  renderEauRows();
+}
+
+function renderEauRows(){
+  const body = document.getElementById('eauBody');
+  body.innerHTML = eauData.map((e, i) => `
+    <tr>
+      <td><input class="row-input" type="date" value="${e.date}" onchange="eauData[${i}].date=this.value"></td>
+      <td><input class="row-input" type="text" value="${e.designation}" placeholder="Ex : Relevé compteur" onchange="eauData[${i}].designation=this.value"></td>
+      <td><input class="row-input amt-input" type="number" step="0.01" value="${e.somme}" placeholder="0.00" onchange="eauData[${i}].somme=this.value"></td>
+      <td><button class="btn-delete" onclick="removeEauLigne(${i})">✕</button></td>
+    </tr>
+  `).join('');
+}
+
+function addEauLigne(){ eauData.push({ date:'', designation:'', somme:'' }); renderEauRows(); }
+function removeEauLigne(i){ eauData.splice(i,1); renderEauRows(); }
+
+// ---------- Récap annuel (12 lignes, une par mois — valeurs à calculer plus tard) ----------
+function renderRecap(){
+  const container = document.getElementById('tabContent');
+  const catHeaders = categories.map(c => `<th style="width:90px">${c.Libelle}</th>`).join('');
+
+  const rows = MOIS.map(m => {
+    const catCells = categories.map(() => `<td class="amt">0.00 €</td>`).join('');
+    return `
+      <tr>
+        <td>${m}</td>
+        <td class="amt">0.00 €</td>
+        <td class="amt">0.00 €</td>
+        <td class="amt">0.00 €</td>
+        ${catCells}
+        <td class="amt">0.00 €</td>
+        <td class="amt">0.00 €</td>
+      </tr>
+    `;
+  }).join('');
+
+  container.innerHTML = `
+    <div class="card">
+      <div class="card-title"><span>Récap annuel</span></div>
+      <div class="scroll-table" style="max-height:75vh; overflow-x:auto;">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:100px">Mois</th>
+              <th style="width:120px">Report mois précédent</th>
+              <th style="width:110px">Vir début mois</th>
+              <th style="width:120px">Différence livret A</th>
+              ${catHeaders}
+              <th style="width:140px">Solde début mois Livret A</th>
+              <th style="width:140px">Solde début mois LES</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
 
 function renderPlaceholder(label){
   document.getElementById('tabContent').innerHTML = `<div class="placeholder">🚧 ${label} — à construire prochainement.</div>`;
